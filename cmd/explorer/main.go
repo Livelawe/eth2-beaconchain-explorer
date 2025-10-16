@@ -439,6 +439,7 @@ func main() {
 			router.HandleFunc("/address/{address}/erc20", handlers.Eth1AddressErc20Transactions).Methods("GET")
 			router.HandleFunc("/address/{address}/erc721", handlers.Eth1AddressErc721Transactions).Methods("GET")
 			router.HandleFunc("/address/{address}/erc1155", handlers.Eth1AddressErc1155Transactions).Methods("GET")
+			router.HandleFunc("/address/{address}/tokens/export", handlers.Eth1AddressTokensExport).Methods("GET")
 			router.HandleFunc("/token/{token}", handlers.Eth1Token).Methods("GET")
 			router.HandleFunc("/token/{token}/transfers", handlers.Eth1TokenTransfers).Methods("GET")
 			router.HandleFunc("/transactions", handlers.Eth1Transactions).Methods("GET")

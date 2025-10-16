@@ -827,6 +827,16 @@
 
 {{ define "AddressTokenBalanceTabContent" }}
   <div style="border-top-left-radius: 0; border-top-right-radius: 0;" class="card shadow-none flex-grow-1">
+    {{ if .Data.Metadata.ERC20TokenLimitExceeded }}
+      <div class="card-header p-2 d-flex justify-content-between align-items-center" style="background-color: var(--bg-color-light); border-bottom: 1px solid var(--border-color);">
+        <span class="text-muted" style="font-size: 0.85rem;">
+          <i class="fas fa-info-circle"></i> Showing first {{ .Data.Metadata.ERC20TokenLimit }} tokens
+        </span>
+        <a href="/address/{{ .Data.Address }}/tokens/export" class="btn btn-sm btn-primary" download>
+          <i class="fas fa-download"></i> Export All Tokens (CSV)
+        </a>
+      </div>
+    {{ end }}
     <div class="card-body p-0 pb-1" style="overflow-y: auto; overflow-x: hidden; height: 250px;">
       <div class="position: relative" style="display: grid; grid-template-columns: minmax(100px, 1fr) minmax(100px, 1fr);">
         <div style="top:0; z-index: 9;" class="position-sticky token-balance-col overview-header-col">
