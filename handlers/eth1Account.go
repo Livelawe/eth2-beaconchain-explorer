@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
+	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -542,5 +544,59 @@ func handleNotFoundHtml(w http.ResponseWriter, r *http.Request) {
 
 	if handleTemplateError(w, r, "eth1Account.go", "Eth1Address", "not valid", templates.GetTemplate(templateFiles...).ExecuteTemplate(w, "layout", data)) != nil {
 		return // an error has occurred and was processed
+	}
+}
+
+func Eth1AddressTokensExport(w http.ResponseWriter, r *http.Request) {
+	address, err := lowerAddressFromRequest(w, r)
+	if err != nil {
+		return
+	}
+	addressBytes := common.FromHex(address)
+
+	// Set headers for CSV download
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"tokens_0x%s.csv\"", address))
+
+	// Write CSV header
+	fmt.Fprintf(w, "Token Address,Token Symbol,Token Name,Balance,Formatted Balance\n")
+
+	// Fetch all tokens in batches
+	offset := uint64(0)
+	limit := uint64(200)
+	
+	for {
+		metadata, err := db.BigtableClient.GetMetadataForAddress(addressBytes, offset, limit)
+		if err != nil {
+			logger.Errorf("error retrieving tokens for export for address %v: %v", address, err)
+			return
+		}
+
+		// Write each token balance to CSV
+		for _, balance := range metadata.Balances {
+			tokenAddress := fmt.Sprintf("0x%x", balance.Token)
+			symbol := balance.Metadata.Symbol
+			name := balance.Metadata.Name
+			rawBalance := fmt.Sprintf("%d", new(big.Int).SetBytes(balance.Balance))
+			
+			// Calculate formatted balance
+			decimals := new(big.Int).SetBytes(balance.Metadata.Decimals).Int64()
+			formattedBalance := decimal.NewFromBigInt(new(big.Int).SetBytes(balance.Balance), 0).Div(decimal.NewFromBigInt(big.NewInt(1), int32(decimals))).String()
+			
+			// Escape CSV fields
+			fmt.Fprintf(w, "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n", 
+				tokenAddress, 
+				strings.ReplaceAll(symbol, "\"", "\"\""),
+				strings.ReplaceAll(name, "\"", "\"\""),
+				rawBalance,
+				formattedBalance)
+		}
+
+		// Check if we've reached the end
+		if len(metadata.Balances) < int(limit) {
+			break
+		}
+		
+		offset += limit
 	}
 }
